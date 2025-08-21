@@ -59,9 +59,35 @@ app.post('/fill-pdf', async (req, res) => {
       });
     }
     
-    // Carregar PDF
-    console.log('Loading PDF from base64...');
+    // Debug do base64 recebido
+    console.log('Base64 length:', pdf_base64.length);
+    console.log('Base64 first 100 chars:', pdf_base64.substring(0, 100));
+    
+    // Validar se é base64 válido
+    if (!/^[A-Za-z0-9+/]+=*$/.test(pdf_base64)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid base64 format'
+      });
+    }
+    
+    // Carregar PDF com validação
+    console.log('Converting base64 to buffer...');
     const pdfBytes = Buffer.from(pdf_base64, 'base64');
+    
+    // Verificar se começa com %PDF
+    const pdfHeader = pdfBytes.slice(0, 10).toString();
+    console.log('PDF header:', pdfHeader);
+    
+    if (!pdfHeader.startsWith('%PDF')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid PDF format - missing PDF header',
+        received_header: pdfHeader
+      });
+    }
+    
+    console.log('Loading PDF document...');
     const pdfDoc = await PDFDocument.load(pdfBytes);
     const form = pdfDoc.getForm();
     
@@ -146,7 +172,31 @@ app.post('/discover-fields', async (req, res) => {
       });
     }
     
+    // Debug e validação
+    console.log('Base64 length:', pdf_base64.length);
+    console.log('Base64 first 100 chars:', pdf_base64.substring(0, 100));
+    
+    if (!/^[A-Za-z0-9+/]+=*$/.test(pdf_base64)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid base64 format'
+      });
+    }
+    
     const pdfBytes = Buffer.from(pdf_base64, 'base64');
+    
+    // Verificar header PDF
+    const pdfHeader = pdfBytes.slice(0, 10).toString();
+    console.log('PDF header:', pdfHeader);
+    
+    if (!pdfHeader.startsWith('%PDF')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid PDF format - missing PDF header',
+        received_header: pdfHeader
+      });
+    }
+    
     const pdfDoc = await PDFDocument.load(pdfBytes);
     const form = pdfDoc.getForm();
     const fields = form.getFields();
